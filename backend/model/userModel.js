@@ -19,7 +19,12 @@ const userSchema = mongoose.Schema(
         role: {
             type: String,
             default: 'user',
-        }
+        }, uploadedImages: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Image',
+            }
+        ]
     },
     {
         timestamps: true

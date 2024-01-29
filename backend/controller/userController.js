@@ -3,6 +3,9 @@ import User from '../model/userModel.js';
 import cookie from 'cookie';
 import bcrypt from 'bcryptjs';
 import { generateUserToken } from '../utils/token.js';
+import imageMiddleware from '../middleware/imageMiddleware.js'
+import Image from '../model/imageModel.js';
+import { authenticateUser } from '../middleware/authMiddleware.js'
 
 const userRouter = express.Router();
 
@@ -75,6 +78,38 @@ userRouter.post('/logout', async (req, res) => {
         expires: new Date(0),
     }));
     res.json({ message: 'Logged out sucessfully!' });
+});
+
+userRouter.post('/post', authenticateUser, imageMiddleware, async (req, res) => {
+    try {
+        const authenticatedUser = req.user;
+        const user = await User.findById(authenticatedUser._id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found!' });
+        }
+        // Assuming other image-related data is sent in the request body
+        const { name, description } = req.body;
+        // Assuming you have a single file in req.file from the middleware
+        const file = req.file;
+
+        const newImage = new Image({
+            name: name,
+            description: description,
+            imagePath: file.path,
+            uploadedBy: user._id,
+        });
+
+        await newImage.save();
+
+        // Update the user's uploadedImages array
+        user.uploadedImages.push(newImage._id);
+        await user.save();
+
+        res.status(201).json({ success: true, message: 'Image uploaded successfully.' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
 });
 
 export default userRouter;
